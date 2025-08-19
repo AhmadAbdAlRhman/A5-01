@@ -1,82 +1,87 @@
 import React, { useState } from "react";
-import { Button, Typography } from "@mui/material";
+import axios from "axios";
 
-export default function AudioEncryptor() {
+export default function FileEncryptor() {
   const [file, setFile] = useState(null);
-  const [downloadUrl, setDownloadUrl] = useState(null);
+  const [key, setKey] = useState("");
+  const [mode, setMode] = useState("encrypt");
+  const [loading, setLoading] = useState(false);
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!file || !key) {
+      alert("يرجى رفع الملف وإدخال المفتاح");
+      return;
+    }
 
-  const handleEncrypt = async () => {
-    if (!file) return alert("اختر ملف صوتي أولاً!");
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("key", key);
 
-    const res = await fetch("http://localhost:3010/encrypt", {
-      method: "POST",
-      body: formData,
-    });
+    try {
+      setLoading(true);
+      const response = await axios.post(
+        `http://localhost:3010/${mode}`,
+        formData,
+        { responseType: "blob" }
+      );
 
-    const blob = await res.blob();
-    setDownloadUrl(URL.createObjectURL(blob));
-  };
-
-  const handleDecrypt = async () => {
-    if (!file) return alert("اختر ملف صوتي أولاً!");
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const res = await fetch("http://localhost:3010/decrypt", {
-      method: "POST",
-      body: formData,
-    });
-
-    const blob = await res.blob();
-    setDownloadUrl(URL.createObjectURL(blob));
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `${mode}_${file.name}`);
+      document.body.appendChild(link);
+      link.click();
+    } catch (err) {
+      alert("خطأ: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <Typography variant="h5" gutterBottom>
-        🎵 تطبيق تشفير/فك تشفير صوت
-      </Typography>
-
-      <input
-        type="file"
-        accept="audio/*"
-        onChange={handleFileChange}
-        style={{ marginBottom: 10 }}
-      />
-
-      <div>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleEncrypt}
-          style={{ marginRight: 10 }}
-        >
-          تشفير
-        </Button>
-
-        <Button
-          variant="contained"
-          color="secondary"
-          onClick={handleDecrypt}
-        >
-          فك التشفير
-        </Button>
-      </div>
-
-      {downloadUrl && (
-        <div style={{ marginTop: 20 }}>
-          <Typography>📥 حمل الملف الناتج:</Typography>
-          <a href={downloadUrl} download="output.wav">
-            تحميل
-          </a>
+    <div style={{ maxWidth: "500px", margin: "50px auto", textAlign: "center" }}>
+      <h2>🔐 تشفير/فك تشفير الملفات (A5/1)</h2>
+      <form onSubmit={handleSubmit}>
+        <div style={{ margin: "10px 0" }}>
+          <input
+            type="file"
+            onChange={(e) => setFile(e.target.files[0])}
+          />
         </div>
-      )}
+        <div style={{ margin: "10px 0" }}>
+          <input
+            type="text"
+            placeholder="أدخل المفتاح (64 بت 0/1)"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            style={{ width: "100%", padding: "8px" }}
+          />
+        </div>
+        <div style={{ margin: "10px 0" }}>
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
+            style={{ width: "100%", padding: "8px" }}
+          >
+            <option value="encrypt">تشفير الملف</option>
+            <option value="decrypt">فك التشفير</option>
+          </select>
+        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            background: "#007bff",
+            color: "#fff",
+            padding: "10px 20px",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          {loading ? "جار المعالجة..." : "تنفيذ"}
+        </button>
+      </form>
     </div>
   );
 }
