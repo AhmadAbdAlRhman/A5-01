@@ -113,8 +113,6 @@ function processFile(inputPath, outputPath, key) {
 // Encrypt
 app.post("/encrypt", upload.single("file"), (req, res) => {
     try {
-        console.log("📩 Body:", req.body);
-        console.log("📂 File:", req.file);
         const key = req.body.key;
         const inputPath = req.file.path;
         const outputPath = path.join("uploads", "encrypted_" + req.file.originalname);
